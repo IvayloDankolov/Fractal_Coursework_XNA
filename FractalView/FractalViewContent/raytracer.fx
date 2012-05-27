@@ -2,6 +2,7 @@ float4x4 View;
 float4x4 Projection;
 
 float3 camPos;
+float3 camDir;
 
 int Iterations;
 float Bailout;
@@ -59,7 +60,7 @@ VertexShaderOutput VertexShaderFunction(VertexShaderInput input)
 
 	output.Position = input.Position;
 
-    output.WorldPos = mul(View, input.Position).xyz;
+    output.WorldPos = mul(input.Position, View) + camPos + camDir;
 
     return output;
 }
@@ -77,7 +78,7 @@ float4 PixelShaderFunction(VertexShaderOutput input) : COLOR0
 
 	float dist = 0;
 
-	while( s < MarchSteps && dist >= 0)
+	while( s < MarchSteps)
 	{
 		float next_step = distance_estimate(curr);
 		if(next_step < 0.001)

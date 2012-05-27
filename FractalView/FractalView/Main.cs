@@ -32,15 +32,16 @@ namespace FractalView
 
         float leftRot =0;
         float upRot = 0;
-        float MoveSpeed = 30;
-
-        public int Width { get { return GraphicsDevice.DisplayMode.Width; } }
-        public int Height { get { return GraphicsDevice.DisplayMode.Height; } }
+        float MoveSpeed = 3;
+        private MouseState originalMouseState;
+        float rotationSpeed = 0.1f;
+        public int Width { get { return GraphicsDevice.Viewport.Width; } }
+        public int Height { get { return GraphicsDevice.Viewport.Height; } }
 
         public Main()
         {
             graphics = new GraphicsDeviceManager(this);
-            IsMouseVisible = true;
+
             Window.AllowUserResizing = true;
             Window.ClientSizeChanged += new EventHandler<EventArgs>(OnResize);
             Content.RootDirectory = "Content";
@@ -88,6 +89,9 @@ namespace FractalView
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
+            Mouse.SetPosition(Width / 2, Height / 2);
+            originalMouseState = Mouse.GetState();
+
             // TODO: use this.Content to load your game content here
             marcher = Content.Load<Effect>("raytracer");
 
@@ -104,18 +108,32 @@ namespace FractalView
 
         void UpdateView()
         {
-            Matrix rot = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
-            View = Matrix.CreateTranslation(CameraPos) * rot;
-            CameraDir = Vector3.Transform(new Vector3(0, 0, 1), rot);
+            View = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
+        
+            CameraDir = Vector3.Transform(new Vector3(0, 0, 1), View);
 
         }
 
         private void AddToCameraPosition(Vector3 vectorToAdd)
         {
-            Matrix cameraRotation = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
-            Vector3 rotatedVector = Vector3.Transform(vectorToAdd, cameraRotation);
+
+            Matrix rot = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
+            Vector3 rotatedVector = Vector3.Transform(vectorToAdd, rot);
             CameraPos += MoveSpeed * rotatedVector;
-            UpdateView();
+        }
+
+        private void HandleMouse(float amount)
+        {
+            MouseState currentMouseState = Mouse.GetState();
+            if (currentMouseState != originalMouseState)
+            {
+                float xDifference = currentMouseState.X - originalMouseState.X;
+                float yDifference = currentMouseState.Y - originalMouseState.Y;
+                leftRot += rotationSpeed * xDifference * amount;
+                upRot += rotationSpeed * yDifference * amount;
+                Mouse.SetPosition(Width / 2, Height / 2);
+                UpdateView();
+            }
         }
 
         private void HandleKeyboard(float amount)
@@ -123,9 +141,9 @@ namespace FractalView
             Vector3 moveVector = new Vector3(0, 0, 0);
             KeyboardState keyState = Keyboard.GetState();
             if (keyState.IsKeyDown(Keys.Up) || keyState.IsKeyDown(Keys.W))
-                moveVector += new Vector3(0, 0, -1);
-            if (keyState.IsKeyDown(Keys.Down) || keyState.IsKeyDown(Keys.S))
                 moveVector += new Vector3(0, 0, 1);
+            if (keyState.IsKeyDown(Keys.Down) || keyState.IsKeyDown(Keys.S))
+                moveVector += new Vector3(0, 0, -1);
             if (keyState.IsKeyDown(Keys.Right) || keyState.IsKeyDown(Keys.D))
                 moveVector += new Vector3(1, 0, 0);
             if (keyState.IsKeyDown(Keys.Left) || keyState.IsKeyDown(Keys.A))
@@ -148,10 +166,12 @@ namespace FractalView
         protected override void Update(GameTime gameTime)
         {
             // Allows the game to exit
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
+                || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 this.Exit();
 
             float timeDifference = (float)gameTime.ElapsedGameTime.TotalMilliseconds / 1000.0f;
+            HandleMouse(timeDifference);
             HandleKeyboard(timeDifference);
 
             // TODO: Add your update logic here
@@ -170,9 +190,10 @@ namespace FractalView
             marcher.Parameters["View"].SetValue(View);
             marcher.Parameters["Projection"].SetValue(Projection);
             marcher.Parameters["camPos"].SetValue(CameraPos);
+            marcher.Parameters["camDir"].SetValue(CameraDir);
 
-            marcher.Parameters["Iterations"].SetValue(100);
-            marcher.Parameters["MarchSteps"].SetValue(100);
+            marcher.Parameters["Iterations"].SetValue(128);
+            marcher.Parameters["MarchSteps"].SetValue(128);
             marcher.Parameters["Power"].SetValue(8);
             marcher.Parameters["Bailout"].SetValue(4);
 
