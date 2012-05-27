@@ -1,0 +1,24 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FractalView", "FractalView\FractalView\FractalView.csproj", "{AA34252D-3208-485F-9541-0687D6234DE1}"
+EndProject
+Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "FractalViewContent", "FractalView\FractalViewContent\FractalViewContent.contentproj", "{EF607C02-A6EF-4F9E-84DF-05CDC731054A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AA34252D-3208-485F-9541-0687D6234DE1}.Debug|x86.ActiveCfg = Debug|x86
+		{AA34252D-3208-485F-9541-0687D6234DE1}.Debug|x86.Build.0 = Debug|x86
+		{AA34252D-3208-485F-9541-0687D6234DE1}.Release|x86.ActiveCfg = Release|x86
+		{AA34252D-3208-485F-9541-0687D6234DE1}.Release|x86.Build.0 = Release|x86
+		{EF607C02-A6EF-4F9E-84DF-05CDC731054A}.Debug|x86.ActiveCfg = Debug|x86
+		{EF607C02-A6EF-4F9E-84DF-05CDC731054A}.Release|x86.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
