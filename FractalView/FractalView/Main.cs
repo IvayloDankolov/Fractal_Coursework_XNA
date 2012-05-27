@@ -30,6 +30,9 @@ namespace FractalView
         Vector3 CameraDir;
         Vector3 CameraUp;
 
+        float leftRot =0;
+        float upRot = 0;
+        float MoveSpeed = 30;
 
         public int Width { get { return GraphicsDevice.DisplayMode.Width; } }
         public int Height { get { return GraphicsDevice.DisplayMode.Height; } }
@@ -65,10 +68,11 @@ namespace FractalView
         /// </summary>
         protected override void Initialize()
         {
-            CameraPos = new Vector3(0, 0, 0);
+            CameraPos = new Vector3(0, 0, -5);
             CameraDir = new Vector3(0, 0, 1);
             CameraUp = new Vector3(0, 1, 0);
-            View = Matrix.CreateLookAt(CameraPos, CameraPos + CameraDir, CameraUp);
+
+            UpdateView();
 
             Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.Pi / 3f, Width / Height, 1, 1000);
 
@@ -98,6 +102,44 @@ namespace FractalView
             // TODO: Unload any non ContentManager content here
         }
 
+        void UpdateView()
+        {
+            Matrix rot = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
+            View = Matrix.CreateTranslation(CameraPos) * rot;
+            CameraDir = Vector3.Transform(new Vector3(0, 0, 1), rot);
+
+        }
+
+        private void AddToCameraPosition(Vector3 vectorToAdd)
+        {
+            Matrix cameraRotation = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
+            Vector3 rotatedVector = Vector3.Transform(vectorToAdd, cameraRotation);
+            CameraPos += MoveSpeed * rotatedVector;
+            UpdateView();
+        }
+
+        private void HandleKeyboard(float amount)
+        {
+            Vector3 moveVector = new Vector3(0, 0, 0);
+            KeyboardState keyState = Keyboard.GetState();
+            if (keyState.IsKeyDown(Keys.Up) || keyState.IsKeyDown(Keys.W))
+                moveVector += new Vector3(0, 0, -1);
+            if (keyState.IsKeyDown(Keys.Down) || keyState.IsKeyDown(Keys.S))
+                moveVector += new Vector3(0, 0, 1);
+            if (keyState.IsKeyDown(Keys.Right) || keyState.IsKeyDown(Keys.D))
+                moveVector += new Vector3(1, 0, 0);
+            if (keyState.IsKeyDown(Keys.Left) || keyState.IsKeyDown(Keys.A))
+                moveVector += new Vector3(-1, 0, 0);
+            if (keyState.IsKeyDown(Keys.Q))
+                moveVector += new Vector3(0, 1, 0);
+            if (keyState.IsKeyDown(Keys.Z))
+                moveVector += new Vector3(0, -1, 0);
+
+            if(moveVector != Vector3.Zero)
+            
+            AddToCameraPosition(moveVector * amount);
+        }
+
         /// <summary>
         /// Allows the game to run logic such as updating the world,
         /// checking for collisions, gathering input, and playing audio.
@@ -108,6 +150,9 @@ namespace FractalView
             // Allows the game to exit
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 this.Exit();
+
+            float timeDifference = (float)gameTime.ElapsedGameTime.TotalMilliseconds / 1000.0f;
+            HandleKeyboard(timeDifference);
 
             // TODO: Add your update logic here
 
@@ -125,6 +170,11 @@ namespace FractalView
             marcher.Parameters["View"].SetValue(View);
             marcher.Parameters["Projection"].SetValue(Projection);
             marcher.Parameters["camPos"].SetValue(CameraPos);
+
+            marcher.Parameters["Iterations"].SetValue(100);
+            marcher.Parameters["MarchSteps"].SetValue(100);
+            marcher.Parameters["Power"].SetValue(8);
+            marcher.Parameters["Bailout"].SetValue(4);
 
             marcher.CurrentTechnique = marcher.Techniques["Raymarch"];
             foreach( var pass in marcher.CurrentTechnique.Passes)
