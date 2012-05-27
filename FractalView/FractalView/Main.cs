@@ -22,7 +22,23 @@ namespace FractalView
         public Main()
         {
             graphics = new GraphicsDeviceManager(this);
+            IsMouseVisible = true;
+            Window.AllowUserResizing = true;
+            Window.ClientSizeChanged += new EventHandler<EventArgs>(OnResize);
             Content.RootDirectory = "Content";
+        }
+
+        void OnResize(object sender, EventArgs e)
+        {
+            PresentationParameters pp = new PresentationParameters
+            {
+                BackBufferWidth = Window.ClientBounds.Width,
+                BackBufferHeight = Window.ClientBounds.Height,
+                DeviceWindowHandle = Window.Handle,
+                DepthStencilFormat = DepthFormat.Depth24,
+                IsFullScreen = false,
+            };
+            GraphicsDevice.Reset(pp);
         }
 
         /// <summary>
