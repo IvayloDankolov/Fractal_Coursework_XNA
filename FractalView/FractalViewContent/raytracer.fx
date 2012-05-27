@@ -1,6 +1,8 @@
 float4x4 View;
 float4x4 Projection;
 
+float3 camPos;
+
 // TODO: add effect parameters here.
 
 struct VertexShaderInput
@@ -15,6 +17,7 @@ struct VertexShaderOutput
 {
     float4 Position : POSITION0;
 
+	float3 WorldPos : TEXCOORD0;
     // TODO: add vertex shader outputs such as colors and texture
     // coordinates here. These values will automatically be interpolated
     // over the triangle, and provided as input to your pixel shader.
@@ -26,7 +29,7 @@ VertexShaderOutput VertexShaderFunction(VertexShaderInput input)
 
 	output.Position = input.Position;
 
-    // TODO: add your vertex shader code here.
+    output.WorldPos = input.Position.xyz;
 
     return output;
 }
@@ -35,7 +38,13 @@ float4 PixelShaderFunction(VertexShaderOutput input) : COLOR0
 {
     // TODO: add your pixel shader code here.
 
-    return float4(1, 0.2, 0.2, 1);
+	float3 ray = input.WorldPos - camPos;
+
+	float4 outColor = float4(0.5,0.5,0.5,1);
+
+	outColor.xyz *= dot(ray, ray); 
+
+    return outColor;
 }
 
 technique Raymarch

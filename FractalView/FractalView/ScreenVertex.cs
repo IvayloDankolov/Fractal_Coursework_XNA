@@ -17,7 +17,6 @@ namespace FractalView
     public struct ScreenVertex : IVertexType
     {
         public Vector4 position;
-
         
         public static VertexDeclaration Format = new VertexDeclaration(
             new VertexElement[] {

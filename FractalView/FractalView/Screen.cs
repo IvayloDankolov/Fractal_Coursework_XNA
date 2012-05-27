@@ -16,10 +16,10 @@ namespace FractalView
         public Screen()
         {
             verts = new ScreenVertex[] {
-                new ScreenVertex { position = new Vector4(-1, -1, 0f, 1f) },
-                new ScreenVertex { position = new Vector4(1, -1, 0f, 1f) },
-                new ScreenVertex { position = new Vector4(1, 1, 0f, 1f) },
-                new ScreenVertex { position = new Vector4(-1, 1, 0f, 1f) }
+                new ScreenVertex { position = new Vector4(-1, -1, 1f, 1f) },
+                new ScreenVertex { position = new Vector4(1, -1, 1f, 1f) },
+                new ScreenVertex { position = new Vector4(1, 1, 1f, 1f) },
+                new ScreenVertex { position = new Vector4(-1, 1, 1f, 1f) }
             };
         }  
 

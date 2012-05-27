@@ -18,8 +18,18 @@ namespace FractalView
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
+        
         Effect marcher;
+        
         Screen scr;
+
+        Matrix View;
+        Matrix Projection;
+
+        Vector3 CameraPos;
+        Vector3 CameraDir;
+        Vector3 CameraUp;
+
 
         public int Width { get { return GraphicsDevice.DisplayMode.Width; } }
         public int Height { get { return GraphicsDevice.DisplayMode.Height; } }
@@ -55,7 +65,12 @@ namespace FractalView
         /// </summary>
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            CameraPos = new Vector3(0, 0, 0);
+            CameraDir = new Vector3(0, 0, 1);
+            CameraUp = new Vector3(0, 1, 0);
+            View = Matrix.CreateLookAt(CameraPos, CameraPos + CameraDir, CameraUp);
+
+            Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.Pi / 3f, Width / Height, 1, 1000);
 
             base.Initialize();
         }
@@ -106,6 +121,10 @@ namespace FractalView
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
+
+            marcher.Parameters["View"].SetValue(View);
+            marcher.Parameters["Projection"].SetValue(Projection);
+            marcher.Parameters["camPos"].SetValue(CameraPos);
 
             marcher.CurrentTechnique = marcher.Techniques["Raymarch"];
             foreach( var pass in marcher.CurrentTechnique.Passes)
