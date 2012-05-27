@@ -18,6 +18,11 @@ namespace FractalView
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
+        Effect marcher;
+        Screen scr;
+
+        public int Width { get { return GraphicsDevice.DisplayMode.Width; } }
+        public int Height { get { return GraphicsDevice.DisplayMode.Height; } }
 
         public Main()
         {
@@ -26,6 +31,7 @@ namespace FractalView
             Window.AllowUserResizing = true;
             Window.ClientSizeChanged += new EventHandler<EventArgs>(OnResize);
             Content.RootDirectory = "Content";
+            scr = new Screen();
         }
 
         void OnResize(object sender, EventArgs e)
@@ -64,6 +70,8 @@ namespace FractalView
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
             // TODO: use this.Content to load your game content here
+            marcher = Content.Load<Effect>("raytracer");
+
         }
 
         /// <summary>
@@ -99,7 +107,15 @@ namespace FractalView
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            // TODO: Add your drawing code here
+            marcher.CurrentTechnique = marcher.Techniques["Raymarch"];
+            foreach( var pass in marcher.CurrentTechnique.Passes)
+            {
+                pass.Apply();
+               
+                scr.Draw(GraphicsDevice);
+            }
+
+            //GraphicsDevice.Present();
 
             base.Draw(gameTime);
         }
