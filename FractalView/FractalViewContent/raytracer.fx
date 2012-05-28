@@ -1,6 +1,7 @@
+//Матрицата на екрана, същата като в програмата на процесора
 float4x4 View;
-float4x4 Projection;
 
+//Променливите по-долу отново са същите като в програмата, позиции на камерата, мащаби и т.н.
 float3 camPos;
 float3 camDir;
 
@@ -11,72 +12,53 @@ int MarchSteps;
 
 float Scale;
 
+
+// Изчислява приблизителна дистанция до повърхността на фрактала,
+// Използващ скаларна 
 float distance_estimate(float3 pos) {
 	float3 z = pos;
 	float dr = 1.0;
 	float r = 0.0;
 	for (int i = 0; i < Iterations ; i++) {
+		
+		//Записваме си дължината на вектора. Това е измислената ни "модул" операция.
 		r = length(z);
 		if (r>Bailout) break;
 
-		// convert to polar coordinates
+		// Отиваме в полярни координати
 		float theta = acos(z.z/r);
 		float phi = atan2(z.y,z.x);
+
+		// Натрупваме производната на итериращата функция
 		dr =  pow( r, Power-1.0)*Power*dr + 1.0;
 
-		// scale and rotate the point
+		// Скалираме и въртим точката, според измисленото ни правило за вдигане на вектор на n-та степен
 		float zr = pow( r,Power);
 		theta = theta*Power;
 		phi = phi*Power;
 
-		// convert back to cartesian coordinates
+		// Връщаме се в декартови координати, за да довършим итерацията
 		z = zr*float3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta));
 		z+=pos;
 	}
+
+	// Апроксимацията ни за разстояние до фрактала идва от функцията на Грийн.
+	// Повече в документацията
 	return 0.5*log(r)*r/dr;
 }
 
-float orbit_trap(float3 p)
-{
-	float3 w = p;
-	float dist = 1e10;
-	for(int i=0; i<Iterations; ++i)
-	{
-		float x = w.x; float x2 = x*x; float x4 = x2*x2;
-		float y = w.y; float y2 = y*y; float y4 = y2*y2;
-		float z = w.z; float z2 = z*z; float z4 = z2*z2;
-
-		float k3 = x2 + z2;
-		float k2 = 1 / sqrt( k3*k3*k3*k3*k3*k3*k3 );
-		float k1 = x4 + y4 + z4 - 6.0*y2*z2 - 6.0*x2*y2 + 2.0*z2*x2;
-		float k4 = x2 - y2 + z2;
-
-		w.x =  64.0*x*y*z*(x2-z2)*k4*(x4-6.0*x2*z2+z4)*k1*k2;
-		w.y = -16.0*y2*k3*k4*k4 + k1*k1;
-		w.z = -8.0*y*k4*(x4*x4 - 28.0*x4*x2*z2 + 70.0*x4*z4 - 28.0*x2*z2*z4 + z4*z4)*k1*k2;
-		
-		dist = min(dist, length(w));
-
-	}
-}
-
-
+//Входа на шейдъра по върхове. Нищо особено в нашия случай
 struct VertexShaderInput
 {
     float4 Position : POSITION0;
-
-    // TODO: add input channels such as texture
-    // coordinates and vertex colors here.
 };
 
+//Изхода от шейдъра по върхове, трябва ни единствено позицията на екрана и реалната позиция
 struct VertexShaderOutput
 {
     float4 Position : POSITION0;
 
 	float3 WorldPos : TEXCOORD0;
-    // TODO: add vertex shader outputs such as colors and texture
-    // coordinates here. These values will automatically be interpolated
-    // over the triangle, and provided as input to your pixel shader.
 };
 
 VertexShaderOutput VertexShaderFunction(VertexShaderInput input)
@@ -85,6 +67,8 @@ VertexShaderOutput VertexShaderFunction(VertexShaderInput input)
 
 	output.Position = input.Position;
 
+	//Приемаме, че екрана е винаги на разстояние 1 от камерата (camDir)
+	//Другото е ясно
     output.WorldPos = mul(input.Position, View) + camPos + camDir;
 
     return output;
@@ -92,29 +76,39 @@ VertexShaderOutput VertexShaderFunction(VertexShaderInput input)
 
 float4 PixelShaderFunction(VertexShaderOutput input) : COLOR0
 {
-    // TODO: add your pixel shader code here.
-
-	float3 dir = input.WorldPos - camPos;
+	// Взимаме посоката на лъча през съответната точка от екрана
+	// И нормираме, за да има дължина 1
+    float3 dir = input.WorldPos - camPos;
 	dir = normalize(dir);
 
+
+	// Текущата точка, която проверяваме
 	float3 curr = camPos;
 
+	// Итерации до момента
 	int s = 0;
 
+	// Извървяно разстояние от началото
 	float dist = 0;
 
 	while( s < MarchSteps)
 	{
+		// Взимаме приблизителното разстояние до фрактала
 		float next_step = distance_estimate(curr);
-		if(next_step < 0.001)
+		
+		//Ако сме достатъчно близко, за харесана от нас дефиниция на "достатъчно", готово.
+		if(next_step < 0.0001)
 		{
 			break;
 		}
+
+		//Иначе, се движим наивно с толкова дистанция по лъча и опитваме отново.
 		curr += next_step * dir;
 		dist += next_step;
 		s++;
 	}
 
+	// Оцветяването в мометна просто зависи от стъпките, които са ни трябвали да стигнем.
 	float mult = (MarchSteps - s) / float(MarchSteps);
 	if(mult < 0 || dist < 0)
 		mult = 0;
@@ -125,17 +119,18 @@ float4 PixelShaderFunction(VertexShaderOutput input) : COLOR0
     return outColor;
 }
 
+//Описание на техниката за оцветяване, със двете си shading функции.
+//Необходимо, за да знае компилатора какво искаме.
 technique Raymarch
 {
     pass Cast
     {
-        // TODO: set renderstates here.
-
         VertexShader = compile vs_3_0 VertexShaderFunction();
         PixelShader = compile ps_3_0 PixelShaderFunction();
     }
 }
 
+//Оцветяване по върховете на 2D шейдъра. Не се различава от това на 3D.
 VertexShaderOutput IterateVS(VertexShaderInput input)
 {
     VertexShaderOutput output;
@@ -147,10 +142,12 @@ VertexShaderOutput IterateVS(VertexShaderInput input)
     return output;
 }
 
+//Оцветяване по пиксели на 2D шейдъра. Тук смятаме Манделброт.
 float4 IteratePS(VertexShaderOutput input) : COLOR0
 {
 	float2 pos = input.WorldPos;
 
+	// Реализацията е абсолютно най-простата апроксимация, върви N стъпки, и виж дали редицата ще е ограничена до момента.
 	float x,y,x0,y0;
 
 	x = x0 = pos.x;
@@ -180,6 +177,7 @@ float4 IteratePS(VertexShaderOutput input) : COLOR0
 
 }
 
+//И описваме и тази техника, за да знае компилатора за нея.
 technique Iterate
 {
 	pass Pass1
