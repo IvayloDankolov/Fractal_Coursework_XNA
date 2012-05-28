@@ -33,10 +33,14 @@ namespace FractalView
         float leftRot =0;
         float upRot = 0;
         float MoveSpeed = 3;
+        float scale = 1;
         private MouseState originalMouseState;
         float rotationSpeed = 0.1f;
+        private int originalScroll=0;
         public int Width { get { return GraphicsDevice.Viewport.Width; } }
         public int Height { get { return GraphicsDevice.Viewport.Height; } }
+
+        int pow = 1; 
 
         public Main()
         {
@@ -108,18 +112,27 @@ namespace FractalView
 
         void UpdateView()
         {
-            View = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
+            Matrix rot = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
+            View = rot * Matrix.CreateScale(scale);
         
-            CameraDir = Vector3.Transform(new Vector3(0, 0, 1), View);
+            CameraDir = Vector3.Transform(new Vector3(0, 0, 1f), rot);
 
         }
 
         private void AddToCameraPosition(Vector3 vectorToAdd)
         {
-
-            Matrix rot = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
-            Vector3 rotatedVector = Vector3.Transform(vectorToAdd, rot);
-            CameraPos += MoveSpeed * rotatedVector;
+            if (pow > 1)
+            {
+                Matrix rot = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
+                Vector3 rotatedVector = Vector3.Transform(vectorToAdd, rot);
+                CameraPos += MoveSpeed * rotatedVector * scale;
+            }
+            else
+            {
+                Vector3 actual = new Vector3(vectorToAdd.X, vectorToAdd.Z, 0);
+                CameraPos += MoveSpeed * scale * actual;
+            }
+            
         }
 
         private void HandleMouse(float amount)
@@ -132,14 +145,107 @@ namespace FractalView
                 leftRot += rotationSpeed * xDifference * amount;
                 upRot += rotationSpeed * yDifference * amount;
                 Mouse.SetPosition(Width / 2, Height / 2);
+                
+
+                int scroll = currentMouseState.ScrollWheelValue - originalScroll;
+
+                originalScroll = currentMouseState.ScrollWheelValue;
+
+                scale *= (float)Math.Pow(1.001, -(double)scroll);
+
+
                 UpdateView();
             }
         }
 
         private void HandleKeyboard(float amount)
         {
-            Vector3 moveVector = new Vector3(0, 0, 0);
             KeyboardState keyState = Keyboard.GetState();
+
+            if (keyState.IsKeyDown(Keys.NumPad1))
+            {
+                pow = 1;
+                CameraPos = new Vector3(0, 0, -5);
+                scale = 3;
+                upRot = 0;
+                leftRot = 0;
+                UpdateView();
+            }
+            else if (keyState.IsKeyDown(Keys.NumPad2))
+            {
+                pow = 2;
+                CameraPos = new Vector3(0, 0, -5);
+                scale = 1;
+                upRot = 0;
+                leftRot = 0;
+                UpdateView();
+            }
+            else if (keyState.IsKeyDown(Keys.NumPad3))
+            {
+                pow = 3;
+                CameraPos = new Vector3(0, 0, -5);
+                scale = 1;
+                upRot = 0;
+                leftRot = 0;
+                UpdateView();
+            }
+            else if (keyState.IsKeyDown(Keys.NumPad4))
+            {
+                pow = 4;
+                CameraPos = new Vector3(0, 0, -5);
+                scale = 1;
+                upRot = 0;
+                leftRot = 0;
+                UpdateView();
+            }
+            else if (keyState.IsKeyDown(Keys.NumPad5))
+            {
+                pow = 5;
+                CameraPos = new Vector3(0, 0, -5);
+                scale = 1;
+                upRot = 0;
+                leftRot = 0;
+                UpdateView();
+            }
+            else if (keyState.IsKeyDown(Keys.NumPad6))
+            {
+                pow = 6;
+                CameraPos = new Vector3(0, 0, -5);
+                scale = 1;
+                upRot = 0;
+                leftRot = 0;
+                UpdateView();
+            }
+            else if (keyState.IsKeyDown(Keys.NumPad7))
+            {
+                pow = 7;
+                CameraPos = new Vector3(0, 0, -5);
+                scale = 1;
+                upRot = 0;
+                leftRot = 0;
+                UpdateView();
+            }
+            else if (keyState.IsKeyDown(Keys.NumPad8))
+            {
+                pow = 8;
+                CameraPos = new Vector3(0, 0, -5);
+                scale = 1;
+                upRot = 0;
+                leftRot = 0;
+                UpdateView();
+            }
+            else if (keyState.IsKeyDown(Keys.NumPad9))
+            {
+                pow = 9;
+                CameraPos = new Vector3(0, 0, -5);
+                scale = 1;
+                upRot = 0;
+                leftRot = 0;
+                UpdateView();
+            }
+
+            Vector3 moveVector = new Vector3(0, 0, 0);
+            
             if (keyState.IsKeyDown(Keys.Up) || keyState.IsKeyDown(Keys.W))
                 moveVector += new Vector3(0, 0, 1);
             if (keyState.IsKeyDown(Keys.Down) || keyState.IsKeyDown(Keys.S))
@@ -192,12 +298,16 @@ namespace FractalView
             marcher.Parameters["camPos"].SetValue(CameraPos);
             marcher.Parameters["camDir"].SetValue(CameraDir);
 
-            marcher.Parameters["Iterations"].SetValue(128);
-            marcher.Parameters["MarchSteps"].SetValue(128);
-            marcher.Parameters["Power"].SetValue(8);
-            marcher.Parameters["Bailout"].SetValue(4);
+            marcher.Parameters["Iterations"].SetValue( (pow == 1) ? 255 : 1024);
+            marcher.Parameters["MarchSteps"].SetValue(255);
+            marcher.Parameters["Power"].SetValue(pow);
+            marcher.Parameters["Bailout"].SetValue(200);
+            marcher.Parameters["Scale"].SetValue(scale);
 
-            marcher.CurrentTechnique = marcher.Techniques["Raymarch"];
+            if(pow > 1)
+                marcher.CurrentTechnique = marcher.Techniques["Raymarch"];
+            else
+                marcher.CurrentTechnique = marcher.Techniques["Iterate"];
             foreach( var pass in marcher.CurrentTechnique.Passes)
             {
                 pass.Apply();
