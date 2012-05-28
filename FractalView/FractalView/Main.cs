@@ -11,66 +11,71 @@ using Microsoft.Xna.Framework.Media;
 
 namespace FractalView
 {
-    /// <summary>
-    /// This is the main type for your game
-    /// </summary>
+    // Класът на програмата, който прави всичко. 
+    // НЕ спазваме много великата OOP идея, но на кой му пука.
     public class Main : Microsoft.Xna.Framework.Game
     {
+
+        // Елементи на графичната среда, не са важни за нашия фрактал.
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
         
+        // Програмата за оцветяване (shader), която всъщност извършва пресмятането.
         Effect marcher;
         
+        // Фиктивният "екран", върху който ще се проектира сцената
         Screen scr;
 
+        // Това не е типична проекционна матрица (защото и подходът ни не е типичен). 
+        // Тя съдържа трансформацията, която ще позиционира гореспоменатият екран в пространството
         Matrix View;
-        Matrix Projection;
 
+
+        // Позиция и посока на камерата, по Look-at системата
         Vector3 CameraPos;
         Vector3 CameraDir;
         Vector3 CameraUp;
 
+        // Две ротации наляво/надясно и нагоре/надолу
         float leftRot =0;
         float upRot = 0;
+
+        // Скорост на движение из сцената. Влияе се от мащаба (scale).
         float MoveSpeed = 3;
-        float scale = 1;
-        private MouseState originalMouseState;
+
+        // Скорост на въртене на камерата. Не се влияе от мащаба.
         float rotationSpeed = 0.1f;
-        private int originalScroll=0;
+
+        // Мащаб на екрана. Във 2D случая това ще промени приближението, а в 3D ъгълът на виждане (field of view)
+        float scale = 1;
+
+        // Предишни състояния на мишката и скролера, които ще ни помогнат за да сметнем какво е направил потребителя между 
+        // 2 периода на опресняване
+        private MouseState originalMouseState;
+        private int originalScroll = 0;
+
+        // Степента на полинома, който итерираме. 1 всъщност е фиктивна степен и казва на програмата да превключи от 3D във 2D
+        int pow = 1;
+
+        
+        // По-лесен начин да се обръщаме към размерите на екрана.
         public int Width { get { return GraphicsDevice.Viewport.Width; } }
         public int Height { get { return GraphicsDevice.Viewport.Height; } }
 
-        int pow = 1; 
 
+        // Конструктор на програмата. Грижи се за създаване на някои важни неща като графичният мениджър.
         public Main()
         {
             graphics = new GraphicsDeviceManager(this);
 
             Window.AllowUserResizing = true;
-            Window.ClientSizeChanged += new EventHandler<EventArgs>(OnResize);
+
             Content.RootDirectory = "Content";
             scr = new Screen();
         }
 
-        void OnResize(object sender, EventArgs e)
-        {
-            PresentationParameters pp = new PresentationParameters
-            {
-                BackBufferWidth = Window.ClientBounds.Width,
-                BackBufferHeight = Window.ClientBounds.Height,
-                DeviceWindowHandle = Window.Handle,
-                DepthStencilFormat = DepthFormat.Depth24,
-                IsFullScreen = false,
-            };
-            GraphicsDevice.Reset(pp);
-        }
-
-        /// <summary>
-        /// Allows the game to perform any initialization it needs to before starting to run.
-        /// This is where it can query for any required services and load any non-graphic
-        /// related content.  Calling base.Initialize will enumerate through any components
-        /// and initialize them as well.
-        /// </summary>
+        // Вика се преди показването на прозореца.
+        // Ние го използваме, за да оправим първоначално камерата.
         protected override void Initialize()
         {
             CameraPos = new Vector3(0, 0, -5);
@@ -79,67 +84,71 @@ namespace FractalView
 
             UpdateView();
 
-            Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.Pi / 3f, Width / Height, 1, 1000);
-
             base.Initialize();
         }
 
-        /// <summary>
-        /// LoadContent will be called once per game and is the place to load
-        /// all of your content.
-        /// </summary>
+
+        // Вика се след като имаме готово графично устройство, за да заредим модели, текстури, шейдъри и т.н.
+        // При нас е важно само да центрираме мишката и да заредим шейдъра "raytracer", който ще прави сметките
         protected override void LoadContent()
         {
-            // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
+            //Първоначалното центриране е необходимо, за да не подскочи камерата.
             Mouse.SetPosition(Width / 2, Height / 2);
             originalMouseState = Mouse.GetState();
 
-            // TODO: use this.Content to load your game content here
             marcher = Content.Load<Effect>("raytracer");
 
         }
 
-        /// <summary>
-        /// UnloadContent will be called once per game and is the place to unload
-        /// all content.
-        /// </summary>
-        protected override void UnloadContent()
-        {
-            // TODO: Unload any non ContentManager content here
-        }
-
+        // Преизчислява матрицата, която позиционира екрана и вектора за посока на камерата
         void UpdateView()
         {
+            // В тази матрица има само две ротации след мащабиране. Транслацията
+            // ще я правим отделно, и без това имаме в шейдъра позицията на камерата
             Matrix rot = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
             View = rot * Matrix.CreateScale(scale);
         
+            // Каноничната посока на камерата е да гледа към положителната част на остта Z
+            // Само трябва да я завъртим правилно, за да получим текущата посока
             CameraDir = Vector3.Transform(new Vector3(0, 0, 1f), rot);
 
         }
 
+        // Добавяме вектор към позицията на камерата
+        // Метода е необходим, защото първо трябва да разграничим между 2D и 3D случаите
+        // и второ, защото ляво/дясно, напред/назад и т.н. са относителни спрямо ориентацията
+        // на екрана и трябва да вземем това в предвид.
         private void AddToCameraPosition(Vector3 vectorToAdd)
         {
             if (pow > 1)
             {
-                Matrix rot = Matrix.CreateRotationX(upRot) * Matrix.CreateRotationY(leftRot);
-                Vector3 rotatedVector = Vector3.Transform(vectorToAdd, rot);
-                CameraPos += MoveSpeed * rotatedVector * scale;
+                // Умножавайки вектора по View не само ще го докараме до правилна ориентация,
+                // ами и го мащабираме подходящо спрямо scale. С един куршум два заека.
+                Vector3 rotatedVector = Vector3.Transform(vectorToAdd, View);
+                CameraPos += MoveSpeed * rotatedVector;
             }
             else
             {
+                // 2D случаят не е интересен.
                 Vector3 actual = new Vector3(vectorToAdd.X, vectorToAdd.Z, 0);
                 CameraPos += MoveSpeed * scale * actual;
             }
             
         }
 
+        // Занимава се с обработване на съобщенията от мишката, като върти
+        // камерата и мащабира при необходимост.
         private void HandleMouse(float amount)
         {
             MouseState currentMouseState = Mouse.GetState();
+            // Вършим работа само, ако състоянието се е променило
             if (currentMouseState != originalMouseState)
             {
+                // Формулата за ротациите е пределно проста.
+                // Разликата в координатите на мишката, по скоростта на въртене, по времето от последното
+                // опресняване до сега. Престо!
                 float xDifference = currentMouseState.X - originalMouseState.X;
                 float yDifference = currentMouseState.Y - originalMouseState.Y;
                 leftRot += rotationSpeed * xDifference * amount;
@@ -151,6 +160,10 @@ namespace FractalView
 
                 originalScroll = currentMouseState.ScrollWheelValue;
 
+                // За мащаба пак е подобна идеята, обаче ...
+                // Бихме желали да се приближаваме с геометрична прогресия, а не линейно, иначе е много
+                // лесно да подминем детайлите, които искаме да видим.
+                // Все пак, фракталите имат детайли на всяко ниво на приближение.
                 scale *= (float)Math.Pow(1.001, -(double)scroll);
 
 
@@ -158,9 +171,16 @@ namespace FractalView
             }
         }
 
+
+        // Занимава се с обработка на съобщенията от клавиатурата.
+        // Това го ползваме за движение из сцената и смяна на фракталите.
         private void HandleKeyboard(float amount)
         {
             KeyboardState keyState = Keyboard.GetState();
+
+            // Тези редове по-долу са абсолютно глупави, просто ме мързеше да го правя красиво
+            // и за това копирах кода за клавиша "1" 10 пъти.
+            // Виновен ! (това всъщност е повече код, отколкото за рисуване на фрактала, ха!)
 
             if (keyState.IsKeyDown(Keys.NumPad1))
             {
@@ -245,6 +265,8 @@ namespace FractalView
             }
 
             Vector3 moveVector = new Vector3(0, 0, 0);
+
+            //Тук пресмятаме накъде ще се движим.
             
             if (keyState.IsKeyDown(Keys.Up) || keyState.IsKeyDown(Keys.W))
                 moveVector += new Vector3(0, 0, 1);
@@ -259,63 +281,64 @@ namespace FractalView
             if (keyState.IsKeyDown(Keys.Z))
                 moveVector += new Vector3(0, -1, 0);
 
+            // И най-накрая прибавяме това към позицията, стига да има смисъл
             if(moveVector != Vector3.Zero)
-            
-            AddToCameraPosition(moveVector * amount);
+                AddToCameraPosition(moveVector * amount);
         }
 
-        /// <summary>
-        /// Allows the game to run logic such as updating the world,
-        /// checking for collisions, gathering input, and playing audio.
-        /// </summary>
-        /// <param name="gameTime">Provides a snapshot of timing values.</param>
+
+        // Този метод отговаря за обновяването на всичко, което не е свързано с рисуване по екрана.
+        // Физика, таймери, събития, и т.н.
+        // Нашата програма е проста и трябва само да погледнем какво се е случило с мишката и клавиатурата
         protected override void Update(GameTime gameTime)
         {
-            // Allows the game to exit
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
-                || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            // Позволява ни да спрем програмата с Escape клавиша
+            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                 this.Exit();
 
+            // Смятаме разликата от последното викане на Update. Това е важно, защото няма гаранция, че тези викания,
+            // стават равномерно, 60 пъти в секунда. Ако не отчетем това, движенията ни ще са много накъсани при по-тежките фрактали
             float timeDifference = (float)gameTime.ElapsedGameTime.TotalMilliseconds / 1000.0f;
+
+            //Викаме функциите които отговарят за мишката и клавиатурата.
             HandleMouse(timeDifference);
             HandleKeyboard(timeDifference);
-
-            // TODO: Add your update logic here
 
             base.Update(gameTime);
         }
 
-        /// <summary>
-        /// This is called when the game should draw itself.
-        /// </summary>
-        /// <param name="gameTime">Provides a snapshot of timing values.</param>
+
+        // И ключовото нещо в нашата програма, поне от C# страната, метода който отговаря за рисуването по екрана.
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            // Изчиства последния кадър. Цветът отдолу не е от значение
+            GraphicsDevice.Clear(Color.Red);
 
+            // Подаваме някои важни за шейдъра неща, като матриците, позиция на камерата,
+            // брой итерации, степен на полинома и мащаб.
             marcher.Parameters["View"].SetValue(View);
-            marcher.Parameters["Projection"].SetValue(Projection);
             marcher.Parameters["camPos"].SetValue(CameraPos);
             marcher.Parameters["camDir"].SetValue(CameraDir);
-
             marcher.Parameters["Iterations"].SetValue( (pow == 1) ? 255 : 1024);
             marcher.Parameters["MarchSteps"].SetValue(255);
             marcher.Parameters["Power"].SetValue(pow);
             marcher.Parameters["Bailout"].SetValue(200);
             marcher.Parameters["Scale"].SetValue(scale);
 
+            // Избираме техника за изобразяване, 2D или 3D в нашия случай
             if(pow > 1)
                 marcher.CurrentTechnique = marcher.Techniques["Raymarch"];
             else
                 marcher.CurrentTechnique = marcher.Techniques["Iterate"];
+
+            // Прилагаме всички етапи на съответната техника и рисуваме екрана с тях
+            // В случая и двете имат само по един етап, но това не е от особено значение.
             foreach( var pass in marcher.CurrentTechnique.Passes)
             {
                 pass.Apply();
                
                 scr.Draw(GraphicsDevice);
             }
-
-            //GraphicsDevice.Present();
 
             base.Draw(gameTime);
         }
